@@ -43,7 +43,6 @@ def run(input_sizes,learning_rate,epochs,batch,node,workers,imnet_path,shared_fo
     init_file = shared_folder / f"{uuid.uuid4().hex}_init"
     if init_file.exists():
         os.remove(str(init_file))
-    print(init_file)
         
     cluster_cfg = cluster_cfg._replace(dist_url=init_file.as_uri())
     trainer = Trainer(train_cfg, cluster_cfg)
