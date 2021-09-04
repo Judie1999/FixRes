@@ -43,6 +43,7 @@ def run(input_sizes,learning_rate,epochs,batch,node,workers,imnet_path,shared_fo
     init_file = shared_folder / f"{uuid.uuid4().hex}_init"
     if init_file.exists():
         os.remove(str(init_file))
+    print(init_file)
         
     cluster_cfg = cluster_cfg._replace(dist_url=init_file.as_uri())
     trainer = Trainer(train_cfg, cluster_cfg)
@@ -66,8 +67,8 @@ if __name__ == "__main__":
     parser.add_argument('--batch', default=64, type=int, help='Batch by GPU')
     parser.add_argument('--node', default=1, type=int, help='GPU nodes')
     parser.add_argument('--workers', default=10, type=int, help='Numbers of CPUs')
-    parser.add_argument('--imnet-path', default='/the/imagenet/path', type=str, help='ImageNet dataset path')
-    parser.add_argument('--shared-folder-path', default='your/shared/folder', type=str, help='Shared Folder')
+    parser.add_argument('--imnet-path', default='/data2/herunyu/imagenet', type=str, help='ImageNet dataset path')
+    parser.add_argument('--shared-folder-path', default='/data2/herunyu/fixres_cache', type=str, help='Shared Folder')
     parser.add_argument('--job-id', default='0', type=str, help='id of the execution')
     parser.add_argument('--local-rank', default=0, type=int, help='GPU: Local rank')
     parser.add_argument('--global-rank', default=0, type=int, help='GPU: glocal rank')

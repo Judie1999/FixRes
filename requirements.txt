@@ -1,6 +1,6 @@
 attrs
 numpy
-torch
+pytorch==1.5.0
 torchvision
 Pillow
 tqdm
