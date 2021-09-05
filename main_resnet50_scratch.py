@@ -6,6 +6,7 @@
 #
 import os
 import uuid
+import setproctitle
 from pathlib import Path
 from imnet_resnet50_scratch import TrainerConfig, ClusterConfig, Trainer
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -73,4 +74,5 @@ if __name__ == "__main__":
     parser.add_argument('--global-rank', default=0, type=int, help='GPU: glocal rank')
     parser.add_argument('--num-tasks', default=8, type=int, help='How many GPUs are used')
     args = parser.parse_args()
+    setproctitle.setproctitle('FIXRES - train')
     run(args.input_size,args.learning_rate,args.epochs,args.batch,args.node,args.workers,args.imnet_path,args.shared_folder_path,args.job_id,args.local_rank,args.global_rank,args.num_tasks)
