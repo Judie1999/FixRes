@@ -29,8 +29,8 @@ def run(path,name,version):
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="Evaluation script for softmax extracted from FixRes models",formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--architecture', default='IGAM_Resnext101_32x48d', type=str,choices=['ResNet50' , 'ResNet50CutMix', 'PNASNet' , 'IGAM_Resnext101_32x48d'], help='Neural network architecture')
-    parser.add_argument('--save-path', default='/where/are/save/softmax/', type=str, help='Path where softmax were saved')
+    parser.add_argument('--architecture', default='ResNet50', type=str,choices=['ResNet50' , 'ResNet50CutMix', 'PNASNet' , 'IGAM_Resnext101_32x48d'], help='Neural network architecture')
+    parser.add_argument('--save-path', default='/data2/herunyu/fixres_cache/', type=str, help='Path where softmax were saved')
     parser.add_argument('--version', default='v1', type=str,choices=['v1' , 'v2'], help='version')
     args = parser.parse_args()
     run(args.save_path,args.architecture,args.version)

@@ -198,9 +198,9 @@ class Trainer:
         print('model_load')
         if torch.cuda.is_available():
             model.cuda(self._train_cfg.local_rank)
-            model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[self._train_cfg.local_rank], output_device=self._train_cfg.local_rank
-            )
+            # model = torch.nn.parallel.DistributedDataParallel(
+            #     model, device_ids=[self._train_cfg.local_rank], output_device=self._train_cfg.local_rank
+            # )
         
         self._state = TrainerState(
              model=model
