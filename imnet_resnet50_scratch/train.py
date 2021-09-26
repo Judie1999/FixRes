@@ -144,7 +144,7 @@ class Trainer:
         # model.cuda(self._train_cfg.local_rank)
         model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O2"，loss_scale=128.0)
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O2", loss_scale=128.0)
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )
