@@ -19,8 +19,8 @@ from .config import TrainerConfig, ClusterConfig
 from .transforms import get_transforms
 from .samplers import RASampler
 
-# from apex import amp
-# from apex.parallel import DistributedDataParallel as ApexDDP
+from apex import amp
+from apex.parallel import DistributedDataParallel as ApexDDP
 # from apex.parallel import convert_syncbn_model
 
 @attr.s(auto_attribs=True)
@@ -91,21 +91,6 @@ class Trainer:
         return empty_trainer
 
     def _setup_process_group(self) -> None:
-        # torch.cuda.set_device(self._train_cfg.local_rank)
-        # torch.distributed.init_process_group(
-        #     backend=self._cluster_cfg.dist_backend,
-        #     init_method=self._cluster_cfg.dist_url,
-        #     world_size=self._train_cfg.num_tasks,
-        #     rank=self._train_cfg.local_rank,
-        # )
-        # # print(f"Process group: {self._train_cfg.num_tasks} tasks, rank: {self._train_cfg.global_rank}")
-        # print('Training in distributed mode with multiple processes, 1 GPU per process. Process %d, total %d.' % (self._train_cfg.local_rank, self._train_cfg.num_tasks))
-        return
-
-    def _init_state(self) -> None:
-        """
-        Initialize the state and load it from an existing checkpoint if any
-        """
         torch.cuda.set_device(self._train_cfg.local_rank)
         torch.distributed.init_process_group(
             backend=self._cluster_cfg.dist_backend,
@@ -113,7 +98,13 @@ class Trainer:
             world_size=self._train_cfg.num_tasks,
             rank=self._train_cfg.local_rank,
         )
+        # print(f"Process group: {self._train_cfg.num_tasks} tasks, rank: {self._train_cfg.global_rank}")
         print('Training in distributed mode with multiple processes, 1 GPU per process. Process %d, total %d.' % (self._train_cfg.local_rank, self._train_cfg.num_tasks))
+
+    def _init_state(self) -> None:
+        """
+        Initialize the state and load it from an existing checkpoint if any
+        """
         torch.manual_seed(0)
         np.random.seed(0)
         print("Create data loaders", flush=True)
@@ -152,11 +143,12 @@ class Trainer:
 
         # model.cuda(self._train_cfg.local_rank)
         model.cuda()
+        optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O2"，loss_scale=128.0)
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )
         linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
-        optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
         self._state = TrainerState(
             epoch=0,accuracy=0.0, model=model, optimizer=optimizer, lr_scheduler=lr_scheduler
@@ -189,7 +181,9 @@ class Trainer:
                 loss = criterion(outputs, labels)
 
                 self._state.optimizer.zero_grad()
-                loss.backward()
+                # loss.backward()
+                with amp.scale_loss(loss, optimizer) as scaled_loss:
+                    scaled_loss.backward()
                 self._state.optimizer.step()
 
                 running_loss += loss.item()
