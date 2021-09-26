@@ -143,13 +143,14 @@ class Trainer:
 
         # model.cuda(self._train_cfg.local_rank)
         model.cuda()
+        linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
         optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
+        lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
         model, optimizer = amp.initialize(model, optimizer, opt_level="O2", loss_scale=128.0)
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )
-        linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
-        lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
+        # model = ApexDDP(model, delay_allreduce=True)
         self._state = TrainerState(
             epoch=0,accuracy=0.0, model=model, optimizer=optimizer, lr_scheduler=lr_scheduler
         )
@@ -176,13 +177,12 @@ class Trainer:
                 inputs, labels = data
                 inputs = inputs.cuda(self._train_cfg.local_rank, non_blocking=True)
                 labels = labels.cuda(self._train_cfg.local_rank, non_blocking=True)
-
                 outputs = self._state.model(inputs)
                 loss = criterion(outputs, labels)
 
-                self._state.optimizer.zero_grad()
                 # loss.backward()
-                with amp.scale_loss(loss, optimizer) as scaled_loss:
+                self._state.optimizer.zero_grad()
+                with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
                     scaled_loss.backward()
                 self._state.optimizer.step()
 

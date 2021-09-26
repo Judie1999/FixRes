@@ -2,4 +2,4 @@
 
 CURRENTTIME=`date +"%Y%m%d-%H%M%S"`
 
-python -m torch.distributed.launch --nproc_per_node=2 main_resnet50_scratch.py --epochs 10 --num_tasks 2 --batch 80 > train-${CURRENTTIME}.log
+python -m torch.distributed.launch --nproc_per_node=1 main_resnet50_scratch.py --epochs 1 --num_tasks 1 --batch 16 > train-${CURRENTTIME}.log
