@@ -7,6 +7,7 @@
 import os
 import uuid
 import setproctitle
+from datetime import datetime
 from pathlib import Path
 from imnet_finetune import TrainerConfig, ClusterConfig, Trainer
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -46,7 +47,8 @@ def run(input_sizes,epochs,learning_rate,batch,imnet_path,architecture,resnet_we
         
     # Create the executor
     os.makedirs(str(shared_folder), exist_ok=True)
-    init_file = shared_folder / f"{uuid.uuid4().hex}_init"
+    # init_file = shared_folder / f"{uuid.uuid4().hex}_init"
+    init_file = shared_folder / datetime.now().strftime("%Y%m%d-%H%M%S")
     if init_file.exists():
         os.remove(str(init_file))
         
@@ -75,8 +77,8 @@ if __name__ == "__main__":
     parser.add_argument('--resnet-weight-path', default='/data2/herunyu/fixres_cache/ResNetFinetune.pth', type=str, help='Neural network weights (only for ResNet50)')
     parser.add_argument('--workers', default=10, type=int, help='Numbers of CPUs')
     parser.add_argument('--job-id', default='0', type=str, help='id of the execution')
-    parser.add_argument('--local-rank', default=0, type=int, help='GPU: Local rank')
-    parser.add_argument('--global-rank', default=0, type=int, help='GPU: glocal rank')
+    parser.add_argument('--local_rank', default=0, type=int, help='GPU: Local rank')
+    parser.add_argument('--global_rank', default=0, type=int, help='GPU: glocal rank')
     parser.add_argument('--num-tasks', default=32, type=int, help='How many GPUs are used')
     parser.add_argument('--shared-folder-path', default='/data2/herunyu/fixres_cache', type=str, help='Shared Folder')
     parser.add_argument('--EfficientNet-models', default='tf_efficientnet_b0_ap', type=str, help='EfficientNet Models')
