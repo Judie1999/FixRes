@@ -20,8 +20,6 @@ from .transforms import get_transforms
 from .samplers import RASampler
 
 from apex import amp
-from apex.parallel import DistributedDataParallel as ApexDDP
-# from apex.parallel import convert_syncbn_model
 
 @attr.s(auto_attribs=True)
 

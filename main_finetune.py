@@ -15,7 +15,7 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 
 def run(input_sizes,epochs,learning_rate,batch,imnet_path,architecture,resnet_weight_path,workers,shared_folder_path,job_id,local_rank,global_rank,num_tasks,EfficientNet_models):
-    cluster_cfg = ClusterConfig(dist_backend="nccl", dist_url="")
+    cluster_cfg = ClusterConfig(dist_backend="nccl", dist_url="env://")
     shared_folder=None
     data_folder_Path=None
     if Path(str(shared_folder_path)).is_dir():
@@ -76,7 +76,6 @@ if __name__ == "__main__":
     parser.add_argument('--architecture', default='ResNet50', type=str,choices=['ResNet50', 'PNASNet' , 'IGAM_Resnext101_32x48d','EfficientNet'], help='Neural network architecture')
     parser.add_argument('--resnet-weight-path', default='/data2/herunyu/fixres_cache/ResNetFinetune.pth', type=str, help='Neural network weights (only for ResNet50)')
     parser.add_argument('--workers', default=10, type=int, help='Numbers of CPUs')
-    parser.add_argument('--job-id', default='0', type=str, help='id of the execution')
     parser.add_argument('--local_rank', default=0, type=int, help='GPU: Local rank')
     parser.add_argument('--global_rank', default=0, type=int, help='GPU: glocal rank')
     parser.add_argument('--num-tasks', default=32, type=int, help='How many GPUs are used')
@@ -86,4 +85,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     setproctitle.setproctitle('FIXRES - Finetune')
+    args.job_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     run(args.input_size,args.epochs,args.learning_rate,args.batch,args.imnet_path,args.architecture,args.resnet_weight_path,args.workers,args.shared_folder_path,args.job_id,args.local_rank,args.global_rank,args.num_tasks,args.EfficientNet_models)

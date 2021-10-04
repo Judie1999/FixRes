@@ -27,7 +27,7 @@ try:
 except ImportError:
     has_timm = False
 
-    
+from apex import amp
 
 @attr.s(auto_attribs=True)
 class TrainerState:
@@ -102,9 +102,10 @@ class Trainer:
             backend=self._cluster_cfg.dist_backend,
             init_method=self._cluster_cfg.dist_url,
             world_size=self._train_cfg.num_tasks,
-            rank=self._train_cfg.global_rank,
+            rank=self._train_cfg.local_rank,
         )
-        print(f"Process group: {self._train_cfg.num_tasks} tasks, rank: {self._train_cfg.global_rank}")
+        # print(f"Process group: {self._train_cfg.num_tasks} tasks, rank: {self._train_cfg.global_rank}")
+        print('Training in distributed mode with multiple processes, 1 GPU per process. Process %d, total %d.' % (self._train_cfg.local_rank, self._train_cfg.num_tasks))
 
     def _init_state(self) -> None:
         """
@@ -201,13 +202,15 @@ class Trainer:
             model.classifier.requires_grad=True
             model.conv_head.requires_grad=True
             
-        model.cuda(self._train_cfg.local_rank)
-        model = torch.nn.parallel.DistributedDataParallel(
-            model, device_ids=[self._train_cfg.local_rank], output_device=self._train_cfg.local_rank
-        )
+        model.cuda()
         linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
         optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O2", loss_scale=128.0)
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[self._train_cfg.local_rank]
+        )
+        print('DDP model created', flush=True)
         self._state = TrainerState(
             epoch=0,accuracy=0.0, model=model, optimizer=optimizer, lr_scheduler=lr_scheduler
         )
@@ -217,6 +220,7 @@ class Trainer:
             self._state = TrainerState.load(checkpoint_fn, default=self._state)
 
     def _train(self) -> Optional[float]:
+        print('Training', flush=True)
         criterion = nn.CrossEntropyLoss()
         print_freq = 10
         acc = None
