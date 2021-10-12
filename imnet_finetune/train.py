@@ -216,17 +216,20 @@ class Trainer:
         )
         checkpoint_fn = osp.join(self._train_cfg.save_folder, str(self._train_cfg.job_id), "checkpoint.pth")
         if os.path.isfile(checkpoint_fn):
-            print(f"Load existing checkpoint from {checkpoint_fn}", flush=True)
+            if self._train_cfg.local_rank == 0:
+                print(f"Load existing checkpoint from {checkpoint_fn}", flush=True)
             self._state = TrainerState.load(checkpoint_fn, default=self._state)
 
     def _train(self) -> Optional[float]:
-        print('Training', flush=True)
+        if self._train_cfg.local_rank == 0:
+            print('Training', flush=True)
         criterion = nn.CrossEntropyLoss()
         print_freq = 10
         acc = None
         max_accuracy=0.0
         
-        print("Evaluation before fine-tuning")        
+        if self._train_cfg.local_rank == 0:
+            print("Evaluation before fine-tuning")        
         correct = 0
         total = 0
         count=0.0
@@ -262,14 +265,16 @@ class Trainer:
 
         acc = correct / total
         ls_nm=running_val_loss/count
-        print(f"Accuracy of the network on the 50000 test images: {acc:.1%}", flush=True)
-        print(f"Loss of the network on the 50000 test images: {ls_nm:.3f}", flush=True)
-        print("Accuracy before fine-tuning : "+str(acc))
+        if self._train_cfg.local_rank == 0:
+            print(f"Accuracy of the network on the 50000 test images: {acc:.1%}", flush=True)
+            print(f"Loss of the network on the 50000 test images: {ls_nm:.3f}", flush=True)
+            print("Accuracy before fine-tuning : "+str(acc))
         max_accuracy=np.max((max_accuracy,acc))
         start_epoch = self._state.epoch
         # Start from the loaded epoch
         for epoch in range(start_epoch, self._train_cfg.epochs):
-            print(f"Start epoch {epoch}", flush=True)
+            if self._train_cfg.local_rank == 0:
+                print(f"Start epoch {epoch}", flush=True)
             self._state.model.eval()
             if self._train_cfg.architecture=='PNASNet' :
                 self._state.model.module.cell_11.train()
@@ -301,12 +306,14 @@ class Trainer:
 
                 running_loss += loss.item()
                 if i % print_freq == print_freq - 1:
-                    print(f"[{epoch:02d}, {i:05d}] loss: {running_loss/print_freq:.3f}", flush=True)
+                    if self._train_cfg.local_rank == 0:
+                        print(f"[{epoch:02d}, {i:05d}] loss: {running_loss/print_freq:.3f}", flush=True)
                     running_loss = 0.0
                 
                 
             if epoch==self._train_cfg.epochs-1:
-                print("Start evaluation of the model", flush=True)
+                if self._train_cfg.local_rank == 0:
+                    print("Start evaluation of the model", flush=True)
                 
                 correct = 0
                 total = 0
@@ -341,10 +348,11 @@ class Trainer:
 
                 acc = correct / total
                 ls_nm=running_val_loss/count
-                print(f"Accuracy of the network on the 50000 test images: {acc:.1%}", flush=True)
-                print(f"Loss of the network on the 50000 test images: {ls_nm:.3f}", flush=True)
+                if self._train_cfg.local_rank == 0:
+                    print(f"Accuracy of the network on the 50000 test images: {acc:.1%}", flush=True)
+                    print(f"Loss of the network on the 50000 test images: {ls_nm:.3f}", flush=True)
                 self._state.accuracy = acc
-                if self._train_cfg.global_rank == 0:
+                if self._train_cfg.local_rank == 0:
                     self.checkpoint(rm_init=False)
                 if epoch==self._train_cfg.epochs-1:
                     return acc

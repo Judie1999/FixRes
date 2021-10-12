@@ -193,7 +193,8 @@ class Trainer:
                 if count>=5005 * 512 /(self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks):
                     break
                 
-            if epoch==self._train_cfg.epochs-1:
+            # if epoch==self._train_cfg.epochs-1:
+            if self._train_cfg.local_rank==0 and ((epoch+1)%10==0 or epoch==self._train_cfg.epochs-1):
                 print("Start evaluation of the model", flush=True)
                 
                 correct = 0
@@ -219,7 +220,7 @@ class Trainer:
                 print(f"Accuracy of the network on the 50000 test images: {acc:.1%}", flush=True)
                 print(f"Loss of the network on the 50000 test images: {ls_nm:.3f}", flush=True)
                 self._state.accuracy = acc
-                if self._train_cfg.global_rank == 0:
+                if self._train_cfg.local_rank == 0:
                     self.checkpoint(rm_init=False)
                 print("accuracy val epoch "+str(epoch)+" acc= "+str(acc))
                 max_accuracy=np.max((max_accuracy,acc))
