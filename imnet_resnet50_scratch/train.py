@@ -144,7 +144,7 @@ class Trainer:
         linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
         optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O2", loss_scale=128.0)
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1", loss_scale=128.0)
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )

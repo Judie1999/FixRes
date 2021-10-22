@@ -57,7 +57,7 @@ def run(input_sizes,epochs,learning_rate,batch,imnet_path,architecture,resnet_we
     
     #The code should be launch on each GPUs
     try:    
-        if global_rank==0:
+        if local_rank==0:
             val_accuracy = trainer.__call__()
             print(f"Validation accuracy: {val_accuracy}")
         else:
