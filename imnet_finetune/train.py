@@ -16,6 +16,7 @@ from torchvision import datasets
 import torchvision.models as models
 from torch.utils.model_zoo import load_url as load_state_dict_from_url
 import numpy as np
+import sys
 from .config import TrainerConfig, ClusterConfig
 from .transforms import get_transforms
 from .resnext_wsl import resnext101_32x48d_wsl
@@ -82,11 +83,12 @@ class Trainer:
         """
         self._setup_process_group()
         self._init_state()
+        save_dir = osp.join(self._train_cfg.save_folder, str(self._train_cfg.job_id)+'_output')
         final_acc = self._train()
         return final_acc
 
     def checkpoint(self, rm_init=True):
-        save_dir = osp.join(self._train_cfg.save_folder, str(self._train_cfg.job_id))
+        save_dir = osp.join(self._train_cfg.save_folder, str(self._train_cfg.job_id)+'_output')
         os.makedirs(save_dir, exist_ok=True)
         self._state.save(osp.join(save_dir, "checkpoint.pth"))
         self._state.save(osp.join(save_dir, "checkpoint_"+str(self._state.epoch)+".pth"))
@@ -206,7 +208,7 @@ class Trainer:
         linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
         optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O2", loss_scale=128.0)
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )
@@ -313,7 +315,7 @@ class Trainer:
                     running_loss = 0.0
                 
                 
-            if epoch==self._train_cfg.epochs-1:
+            if epoch==self._train_cfg.epochs-1 or (epoch+1)%10==0:
                 if self._train_cfg.local_rank == 0:
                     print("Start evaluation of the model", flush=True)
                 

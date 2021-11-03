@@ -18,6 +18,7 @@ import numpy as np
 from .config import TrainerConfig, ClusterConfig
 from .transforms import get_transforms
 from .samplers import RASampler
+import time
 
 from apex import amp
 
@@ -144,7 +145,7 @@ class Trainer:
         linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
         optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O1", loss_scale=128.0)
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )
@@ -171,6 +172,8 @@ class Trainer:
             self._state.epoch = epoch
             running_loss = 0.0
             count=0
+            end = time.time()
+            epoch_fps = []
             for i, data in enumerate(self._train_loader):
                 inputs, labels = data
                 inputs = inputs.cuda(self._train_cfg.local_rank, non_blocking=True)
@@ -188,10 +191,13 @@ class Trainer:
                 count=count+1
                 if i % print_freq == print_freq - 1:
                     if self._train_cfg.local_rank == 0:
-                        print(f"[{epoch:02d}, {i:05d}] loss: {running_loss/print_freq:.3f}", flush=True)
+                        print(f"[{epoch:02d}, {i:05d}] loss: {running_loss/print_freq:.3f} time: {time.time()-end:.3f}", flush=True)
                     running_loss = 0.0
                 if count>=5005 * 512 /(self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks):
                     break
+                epoch_fps.append(inputs.shape[0] * self._train_cfg.num_tasks / (time.time() - end))
+                end = time.time()
+            print('\nEpoch {}: {} fps\n'.format(epoch, sum(epoch_fps[5:]) / len(epoch_fps[5:])))
                 
             # if epoch==self._train_cfg.epochs-1:
             if self._train_cfg.local_rank==0 and ((epoch+1)%10==0 or epoch==self._train_cfg.epochs-1):
