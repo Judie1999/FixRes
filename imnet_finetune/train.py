@@ -18,7 +18,8 @@ from torch.utils.model_zoo import load_url as load_state_dict_from_url
 import numpy as np
 import sys
 from .config import TrainerConfig, ClusterConfig
-from .transforms import get_transforms
+# from .transforms import get_transforms
+from .transforms_v2 import get_transforms
 from .resnext_wsl import resnext101_32x48d_wsl
 from .pnasnet import pnasnet5large
 try:
@@ -126,10 +127,11 @@ class Trainer:
             backbone_architecture='pnasnet5large'
             
         transformation=get_transforms(input_size=self._train_cfg.input_size,test_size=self._train_cfg.input_size, kind='full', crop=True, need=('train', 'val'), backbone=backbone_architecture)
-        transform_test = transformation['val']
+        transform_train = transformation['val_train']
+        transform_test = transformation['val_test']
         
         
-        train_set = datasets.ImageFolder(self._train_cfg.imnet_path+ '/train',transform=transform_test)
+        train_set = datasets.ImageFolder(self._train_cfg.imnet_path+ '/train',transform=transform_train)
         
         train_sampler = torch.utils.data.distributed.DistributedSampler(
             train_set,num_replicas=self._train_cfg.num_tasks, rank=self._train_cfg.global_rank
