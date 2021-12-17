@@ -149,7 +149,7 @@ class Trainer:
         # optimizer = optim.Adam(model.parameters())
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
         # lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5)
-        # model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )
@@ -182,13 +182,25 @@ class Trainer:
                 inputs, labels = data
                 inputs = inputs.cuda(self._train_cfg.local_rank, non_blocking=True)
                 labels = labels.cuda(self._train_cfg.local_rank, non_blocking=True)
+                if self._train_cfg.num_tasks==1 and self._train_cfg.epochs==1 and i==1999:
+                    with torch.autograd.profiler.profile(use_cuda=True) as prof:
+                        outputs = self._state.model(inputs)
+                        loss = criterion(outputs, labels)
+                        self._state.optimizer.zero_grad()
+                        with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
+                            scaled_loss.backward()
+                        loss.backward()
+                        self._state.optimizer.step()
+                    print(prof.key_averages().table(sort_by="self_cpu_time_total"))
+                    prof.export_chrome_trace('train_{}.prof'.format(i))
+                    sys.exit()
                 outputs = self._state.model(inputs)
                 loss = criterion(outputs, labels)
 
                 # loss.backward()
                 self._state.optimizer.zero_grad()
-                # with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
-                #     scaled_loss.backward()
+                with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
+                    scaled_loss.backward()
                 loss.backward()
                 self._state.optimizer.step()
 
@@ -203,7 +215,8 @@ class Trainer:
                 epoch_fps.append(inputs.shape[0] * self._train_cfg.num_tasks / (time.time() - end))
                 end = time.time()
             print('\nEpoch {}: {} fps\n'.format(epoch, sum(epoch_fps[5:]) / len(epoch_fps[5:])))
-                
+            
+
             # if epoch==self._train_cfg.epochs-1:
             if self._train_cfg.local_rank==0 and ((epoch+1)%10==0 or epoch==self._train_cfg.epochs-1):
                 print("Start evaluation of the model", flush=True)
