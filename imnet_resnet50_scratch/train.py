@@ -201,7 +201,7 @@ class Trainer:
                 self._state.optimizer.zero_grad()
                 with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
                     scaled_loss.backward()
-                loss.backward()
+                # loss.backward()
                 self._state.optimizer.step()
 
                 running_loss += loss.item()
