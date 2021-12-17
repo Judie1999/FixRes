@@ -76,6 +76,6 @@ if __name__ == "__main__":
     parser.add_argument('--global_rank', default=0, type=int, help='GPU: glocal rank')
     parser.add_argument('--num_tasks', default=8, type=int, help='How many GPUs are used')
     args = parser.parse_args()
-    setproctitle.setproctitle('FIXRES - train')
+    setproctitle.setproctitle('FIXRES - train - SGD')
     args.job_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     run(args.input_size,args.learning_rate,args.epochs,args.batch,args.node,args.workers,args.imnet_path,args.shared_folder_path,args.job_id,args.local_rank,args.global_rank,args.num_tasks)

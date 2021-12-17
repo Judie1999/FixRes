@@ -19,6 +19,7 @@ from .config import TrainerConfig, ClusterConfig
 from .transforms import get_transforms
 from .samplers import RASampler
 import time
+import sys
 
 from apex import amp
 
@@ -143,9 +144,12 @@ class Trainer:
         # model.cuda(self._train_cfg.local_rank)
         model.cuda()
         linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
+        # linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /5120.0
         optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
+        # optimizer = optim.Adam(model.parameters())
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
+        # lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5)
+        # model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[self._train_cfg.local_rank]
         )
@@ -183,8 +187,9 @@ class Trainer:
 
                 # loss.backward()
                 self._state.optimizer.zero_grad()
-                with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
-                    scaled_loss.backward()
+                # with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
+                #     scaled_loss.backward()
+                loss.backward()
                 self._state.optimizer.step()
 
                 running_loss += loss.item()

@@ -17,6 +17,7 @@ import torchvision.models as models
 from torch.utils.model_zoo import load_url as load_state_dict_from_url
 import numpy as np
 import sys
+import time
 from .config import TrainerConfig, ClusterConfig
 # from .transforms import get_transforms
 from .transforms_v2 import get_transforms
@@ -207,8 +208,9 @@ class Trainer:
             model.conv_head.requires_grad=True
             
         model.cuda()
-        linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
-        optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
+        # linear_scaled_lr = 8.0 * self._train_cfg.lr * self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks /512.0
+        # optimizer = optim.SGD(model.parameters(), lr=linear_scaled_lr, momentum=0.9,weight_decay=1e-4)
+        optimizer = optim.SGD(model.parameters(), lr=self._train_cfg.lr, momentum=0.9,weight_decay=1e-4)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30)
         model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
         model = torch.nn.parallel.DistributedDataParallel(
@@ -296,6 +298,9 @@ class Trainer:
             self._state.lr_scheduler.step(epoch)
             self._state.epoch = epoch
             running_loss = 0.0
+            count=0
+            end = time.time()
+            epoch_fps = []
             for i, data in enumerate(self._train_loader):
                 inputs, labels = data
                 inputs = inputs.cuda(self._train_cfg.local_rank, non_blocking=True)
@@ -311,10 +316,16 @@ class Trainer:
                 self._state.optimizer.step()
 
                 running_loss += loss.item()
+                count=count+1
                 if i % print_freq == print_freq - 1:
                     if self._train_cfg.local_rank == 0:
-                        print(f"[{epoch:02d}, {i:05d}] loss: {running_loss/print_freq:.3f}", flush=True)
+                        print(f"[{epoch:02d}, {i:05d}] loss: {running_loss/print_freq:.3f} time: {time.time()-end:.3f}", flush=True)
                     running_loss = 0.0
+                if count>=5005 * 512 /(self._train_cfg.batch_per_gpu * self._train_cfg.num_tasks):
+                    break
+                epoch_fps.append(inputs.shape[0] * self._train_cfg.num_tasks / (time.time() - end))
+                end = time.time()
+            print('\nEpoch {}: {} fps\n'.format(epoch, sum(epoch_fps[5:]) / len(epoch_fps[5:])))
                 
                 
             if epoch==self._train_cfg.epochs-1 or (epoch+1)%10==0:
