@@ -19,8 +19,8 @@ import numpy as np
 import sys
 import time
 from .config import TrainerConfig, ClusterConfig
-# from .transforms import get_transforms
-from .transforms_v2 import get_transforms
+from .transforms import get_transforms
+# from .transforms_v2 import get_transforms
 from .resnext_wsl import resnext101_32x48d_wsl
 from .pnasnet import pnasnet5large
 try:
@@ -128,11 +128,10 @@ class Trainer:
             backbone_architecture='pnasnet5large'
             
         transformation=get_transforms(input_size=self._train_cfg.input_size,test_size=self._train_cfg.input_size, kind='full', crop=True, need=('train', 'val'), backbone=backbone_architecture)
-        transform_train = transformation['val_train']
-        transform_test = transformation['val_test']
+        transform_test = transformation['val']
         
         
-        train_set = datasets.ImageFolder(self._train_cfg.imnet_path+ '/train',transform=transform_train)
+        train_set = datasets.ImageFolder(self._train_cfg.imnet_path+ '/train',transform=transform_test)
         
         train_sampler = torch.utils.data.distributed.DistributedSampler(
             train_set,num_replicas=self._train_cfg.num_tasks, rank=self._train_cfg.global_rank
@@ -305,6 +304,18 @@ class Trainer:
                 inputs, labels = data
                 inputs = inputs.cuda(self._train_cfg.local_rank, non_blocking=True)
                 labels = labels.cuda(self._train_cfg.local_rank, non_blocking=True)
+                if self._train_cfg.num_tasks==1 and self._train_cfg.epochs==1 and i==1999:
+                    with torch.autograd.profiler.profile(use_cuda=True) as prof:
+                        outputs = self._state.model(inputs)
+                        loss = criterion(outputs, labels)
+                        self._state.optimizer.zero_grad()
+                        with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
+                            scaled_loss.backward()
+                        loss.backward()
+                        self._state.optimizer.step()
+                    print(prof.key_averages().table(sort_by="self_cpu_time_total"))
+                    prof.export_chrome_trace('finetune_{}.prof'.format(i))
+                    end = time.time()
 
                 outputs = self._state.model(inputs)
                 loss = criterion(outputs, labels)

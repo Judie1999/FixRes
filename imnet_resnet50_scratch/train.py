@@ -193,7 +193,8 @@ class Trainer:
                         self._state.optimizer.step()
                     print(prof.key_averages().table(sort_by="self_cpu_time_total"))
                     prof.export_chrome_trace('train_{}.prof'.format(i))
-                    sys.exit()
+                    end = time.time()
+                    # sys.exit()
                 outputs = self._state.model(inputs)
                 loss = criterion(outputs, labels)
 
