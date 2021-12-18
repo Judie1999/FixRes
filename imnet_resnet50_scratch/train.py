@@ -189,7 +189,6 @@ class Trainer:
                         self._state.optimizer.zero_grad()
                         with amp.scale_loss(loss, self._state.optimizer) as scaled_loss:
                             scaled_loss.backward()
-                        loss.backward()
                         self._state.optimizer.step()
                     print(prof.key_averages().table(sort_by="self_cpu_time_total"))
                     prof.export_chrome_trace('train_{}.prof'.format(i))
