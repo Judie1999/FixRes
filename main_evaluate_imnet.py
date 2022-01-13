@@ -10,6 +10,7 @@ import setproctitle
 from pathlib import Path
 from imnet_evaluate import TrainerConfig, ClusterConfig, Trainer
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from datetime import datetime
 
 
 
@@ -65,16 +66,16 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Evaluation script for FixRes models",formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('--input-size', default=320, type=int, help='Images input size')
     parser.add_argument('--architecture', default='IGAM_Resnext101_32x48d', type=str,choices=['ResNet50', 'PNASNet' , 'IGAM_Resnext101_32x48d'], help='Neural network architecture')
-    parser.add_argument('--weight-path', default='/where/are/the/weigths.pth', type=str, help='Neural network weights')
-    parser.add_argument('--imnet-path', default='/data2/herunyu/imagenet', type=str, help='ImageNet dataset path')
-    parser.add_argument('--shared-folder-path', default='/data2/herunyu/fixres_cache', type=str, help='Shared Folder')
+    parser.add_argument('--weight_path', default='/where/are/the/weigths.pth', type=str, help='Neural network weights')
+    parser.add_argument('--imnet_path', default='/data2/herunyu/imagenet', type=str, help='ImageNet dataset path')
+    parser.add_argument('--shared_folder_path', default='./train_cache', type=str, help='Shared Folder')
     parser.add_argument('--batch', default=32, type=int, help='Batch per GPU')
-    parser.add_argument('--workers', default=40, type=int, help='Numbers of CPUs')
-    parser.add_argument('--job-id', default='0', type=str, help='id of the execution')
-    parser.add_argument('--local-rank', default=0, type=int, help='GPU: Local rank')
-    parser.add_argument('--global-rank', default=0, type=int, help='GPU: glocal rank')
-    parser.add_argument('--num-tasks', default=32, type=int, help='How many GPUs are used')
+    parser.add_argument('--workers', default=10, type=int, help='Numbers of CPUs')
+    parser.add_argument('--local_rank', default=0, type=int, help='GPU: Local rank')
+    parser.add_argument('--global_rank', default=0, type=int, help='GPU: glocal rank')
+    parser.add_argument('--num_tasks', default=32, type=int, help='How many GPUs are used')
     
     args = parser.parse_args()
     setproctitle.setproctitle('FIXRES - Eval')
+    args.job_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     run(args.input_size,args.architecture,args.weight_path,args.imnet_path,args.batch,args.workers,args.shared_folder_path,args.job_id,args.local_rank,args.global_rank,args.num_tasks)

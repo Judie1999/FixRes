@@ -62,8 +62,9 @@ def run(input_sizes,epochs,learning_rate,batch,imnet_path,architecture,resnet_we
             print(f"Validation accuracy: {val_accuracy}")
         else:
             trainer.__call__()
-    except:
+    except Exception as e:
       print("Job failed")
+      print(e)
 
 
 if __name__ == "__main__":
@@ -72,14 +73,14 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', default=1, type=int, help='epochs')
     parser.add_argument('--input-size', default=384, type=int, help='images input size')
     parser.add_argument('--batch', default=64, type=int, help='Batch by GPU')
-    parser.add_argument('--imnet-path', default='/data2/herunyu/imagenet', type=str, help='Image Net dataset path')
+    parser.add_argument('--imnet-path', default='/opt/gpu/imagenet', type=str, help='Image Net dataset path')
     parser.add_argument('--architecture', default='ResNet50', type=str,choices=['ResNet50', 'PNASNet' , 'IGAM_Resnext101_32x48d','EfficientNet'], help='Neural network architecture')
     parser.add_argument('--resnet-weight-path', default='/data2/herunyu/fixres_cache/ResNetFinetune.pth', type=str, help='Neural network weights (only for ResNet50)')
     parser.add_argument('--workers', default=10, type=int, help='Numbers of CPUs')
     parser.add_argument('--local_rank', default=0, type=int, help='GPU: Local rank')
     parser.add_argument('--global_rank', default=0, type=int, help='GPU: glocal rank')
-    parser.add_argument('--num-tasks', default=32, type=int, help='How many GPUs are used')
-    parser.add_argument('--shared-folder-path', default='/data2/herunyu/fixres_cache', type=str, help='Shared Folder')
+    parser.add_argument('--num_tasks', default=32, type=int, help='How many GPUs are used')
+    parser.add_argument('--shared-folder-path', default='/home/hry/FixRes_gpu/train_cache/', type=str, help='Shared Folder')
     parser.add_argument('--EfficientNet-models', default='tf_efficientnet_b0_ap', type=str, help='EfficientNet Models')
 
 
