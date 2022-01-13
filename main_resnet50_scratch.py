@@ -57,8 +57,9 @@ def run(input_sizes,learning_rate,epochs,batch,node,workers,imnet_path,shared_fo
             print(f"Validation accuracy: {val_accuracy}")
         else:
             trainer.__call__()
-    except:
+    except Exception as e:
       print("Job failed")
+      print(e)
 
 
 if __name__ == "__main__":
